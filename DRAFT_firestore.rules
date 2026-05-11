@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Vendor Validation ---
+    function isValidVendor(data) {
+      return data.keys().hasAll(['vendorCode', 'name1', 'updatedAt'])
+        && data.vendorCode is string && data.vendorCode.size() <= 64
+        && data.name1 is string && data.name1.size() <= 200
+        && (data.searchTerm == null || (data.searchTerm is string && data.searchTerm.size() <= 200))
+        && (data.city == null || (data.city is string && data.city.size() <= 100))
+        && (data.updatedAt is number || data.updatedAt is timestamp);
+    }
+
+    match /vendors/{vendorId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
+      
+      allow create: if isSignedIn() 
+        && isValidId(vendorId)
+        && isValidVendor(incoming())
+        && incoming().keys().size() <= 35; // Strict key count to prevent shadow fields
+
+      allow update: if isSignedIn()
+        && isValidVendor(incoming())
+        && incoming().vendorCode == existing().vendorCode // Immutable ID
+        && (
+          // Action: Sync/General Update
+          incoming().diff(existing()).affectedKeys().hasAny(['name1', 'name2', 'searchTerm', 'street', 'postalCode', 'city', 'cty', 'rg', 'industry', 'minorityIndic', 'sex', 'vendorType', 'regDate', 'validityDate', 'regType', 'phone1', 'phone2', 'email', 'updatedAt'])
+          && incoming().diff(existing()).affectedKeys().hasOnly(['name1', 'name2', 'searchTerm', 'street', 'postalCode', 'city', 'cty', 'rg', 'industry', 'minorityIndic', 'sex', 'vendorType', 'regDate', 'validityDate', 'regType', 'phone1', 'phone2', 'email', 'updatedAt'])
+        );
+      
+      allow delete: if false; // Deletion not allowed by protocol currently
+    }
+  }
+}

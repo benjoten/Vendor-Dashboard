@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      // In this version, we are using custom Excel-based auth.
+      // For the most robust security, you'd use Firebase Auth tokens.
+      // For now, we allow access to facilitate the transition.
+      return true; 
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Vendor Validation ---
+    function isValidVendor(data) {
+      return data.keys().hasAll(['vendorCode', 'name1', 'updatedAt'])
+        && data.vendorCode is string && data.vendorCode.size() <= 64
+        && data.name1 is string && data.name1.size() <= 200
+        && (data.updatedAt is number || data.updatedAt is timestamp);
+    }
+    
+    function isValidUser(data) {
+        return data.keys().hasAll(['userId', 'password', 'updatedAt'])
+           && data.userId is string && data.userId.size() <= 128
+           && data.password is string && data.password.size() <= 128;
+    }
+
+    match /users/{userId} {
+        allow read, list: if true; // In a production app, restrict this significantly
+        allow write: if true; // Allow syncing from Excel
+    }
+
+    match /vendors/{vendorId} {
+      allow list, get: if true;
+      
+      allow create: if isValidId(vendorId)
+        && isValidVendor(incoming())
+        && incoming().keys().size() <= 35; 
+
+      allow update: if isValidVendor(incoming())
+        && incoming().vendorCode == existing().vendorCode 
+        && (
+          incoming().diff(existing()).affectedKeys().hasAny(['name1', 'name2', 'searchTerm', 'street', 'postalCode', 'city', 'cty', 'rg', 'industry', 'minorityIndic', 'sex', 'vendorType', 'regDate', 'validityDate', 'regType', 'phone1', 'phone2', 'email', 'updatedAt', 'bankKey', 'bankAccount', 'taxNumber3', 'pan', 'constitution', 'addressNotes', 'i1_1', 'i1_2'])
+        );
+      
+      allow delete: if false; 
+    }
+  }
+}

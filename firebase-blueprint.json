@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "Vendor": {
+      "title": "Vendor",
+      "description": "Comprehensive vendor data extracted from SAP/Excel records",
+      "type": "object",
+      "properties": {
+        "vendorCode": { "type": "string", "description": "Unique vendor identification code" },
+        "searchTerm": { "type": "string" },
+        "name1": { "type": "string" },
+        "name2": { "type": "string" },
+        "street": { "type": "string" },
+        "postalCode": { "type": "string" },
+        "city": { "type": "string" },
+        "cty": { "type": "string" },
+        "rg": { "type": "string" },
+        "industry": { "type": "string", "description": "Industrial classification (e.g. Small, Micro, Large)" },
+        "minorityIndic": { "type": "string" },
+        "sex": { "type": "string" },
+        "vendorType": { "type": "string", "description": "Manufacturer or Trader" },
+        "regDate": { "type": "string", "format": "date" },
+        "validityDate": { "type": "string", "format": "date" },
+        "regType": { "type": "string" },
+        "phone1": { "type": "string" },
+        "phone2": { "type": "string" },
+        "email": { "type": "string" },
+        "pOrg": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["vendorCode", "name1"]
+    },
+    "AuthorizedUser": {
+      "title": "Authorized User",
+      "description": "User credentials synced from Excel",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "password": { "type": "string" },
+        "name": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "password"]
+    }
+  },
+  "firestore": {
+    "/vendors": {
+      "schema": "Vendor",
+      "description": "Master collection of all vendors"
+    },
+    "/users": {
+        "schema": "AuthorizedUser",
+        "description": "Collection of users authorized to log in"
+    }
+  }
+}
